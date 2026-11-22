@@ -1,0 +1,24 @@
+# Credenciales
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Contexto
+CONSIGNA.md
+GUIA.md
+OBJETIVOS.md
+ESTRUCTURA.md
+ENTREGABLES.md
