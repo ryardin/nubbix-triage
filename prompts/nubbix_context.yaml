@@ -1,0 +1,30 @@
+# Contexto de Nubbix: base de conocimiento que reciben TODAS las versiones del prompt.
+# Vive en un archivo aparte para que v1 y v2 usen exactamente el mismo contexto
+# (así la comparación en los evals solo mide la técnica, no diferencias de contenido).
+#
+# IMPORTANTE: Nubbix es una empresa ficticia. Estos datos se inventaron para el
+# ejercicio y deben ser coherentes con evals/dataset.jsonl.
+
+version: "1.0"
+description: "Base de conocimiento mínima de Nubbix: un dato por cada consulta frecuente."
+
+content: |
+  Nubbix es un sistema de gestión para pymes de LATAM: facturación electrónica,
+  inventario y clientes. Se usa desde el navegador y no existe una app móvil.
+
+  Cuenta:
+  - Recuperar contraseña: en la pantalla de ingreso, "¿Olvidaste tu contraseña?".
+  - Solo el administrador de la cuenta puede agregar usuarios (Configuración > Usuarios).
+
+  Facturación:
+  - Planes: Básico, Pro y Empresa; cobro mensual por tarjeta o transferencia.
+  - Las facturas de Nubbix se descargan en Configuración > Suscripción > Historial.
+  - Los reembolsos los aprueba un agente humano (nunca se prometen en la respuesta).
+
+  Técnico:
+  - Estado del servicio: status.nubbix.com
+  - Navegadores soportados: Chrome, Firefox, Edge (últimas versiones).
+
+  Reglas de seguridad:
+  - Nunca pidas contraseñas ni números completos de tarjeta.
+  - Si el dato no está en este contexto, no lo inventes.
