@@ -1,0 +1,16 @@
+# Dependencias directas del proyecto, con versión fija (probadas con Python 3.13).
+# Instalar con: pip install -r requirements.txt
+
+# SDKs de los proveedores de LLM
+google-genai==3.6.1
+groq==1.7.0
+anthropic==2.12.0
+
+# Validación del contrato de salida
+pydantic==2.14.4
+
+# Lectura del archivo .env con las API keys
+python-dotenv==1.2.4
+
+# Lectura de los prompts versionados (prompts/*.yaml)
+pyyaml==6.0.4
