@@ -60,10 +60,12 @@ PROVIDERS = {
 # misma categoría siempre), no creatividad. Anthropic no acepta este parámetro.
 TEMPERATURE = 0.0
 
-# max_tokens = 1024: la respuesta esperada (un JSON con answer, confidence, category y
-# actions) ocupa unos 200-400 tokens. Dejamos margen para que el JSON nunca se corte a
-# la mitad, porque un JSON cortado es inválido y obliga a reintentar (más costo).
-MAX_TOKENS = 1024
+# max_tokens = 512: el JSON de respuesta medido ocupa ~60 tokens, y el más largo posible
+# (answer de 500 caracteres + 3 acciones) no llega a 250. 512 deja margen para que el JSON
+# nunca se corte a la mitad (sería inválido y obligaría a reintentar).
+# Empezamos con 1024, pero el nivel gratuito de Groq limita la salida a 1000 tokens por
+# minuto y rechazaba las llamadas con 429 antes de generar nada.
+MAX_TOKENS = 512
 
 # timeout = 30 s: la llamada más lenta en las pruebas tardó ~17 s (un modelo con
 # razonamiento). 30 s da margen sin dejar la CLI colgada si el proveedor no responde.
