@@ -1,0 +1,6 @@
+# Normaliza los saltos de línea: en el repo siempre LF, sin importar el sistema operativo de quien clone.
+* text=auto eol=lf
+
+# Scripts de Windows necesitan CRLF para ejecutarse correctamente.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
