@@ -32,6 +32,7 @@ def get_provider(name: str) -> LLMProvider:
         api_key=config.get_api_key(name),
         model=config.PROVIDERS[name]["model"],
         temperature=config.TEMPERATURE,
-        max_tokens=config.MAX_TOKENS,
+        max_tokens=config.PROVIDERS[name]["max_tokens"],
         timeout_s=config.TIMEOUT_S,
+        max_retries=config.MAX_RETRIES,
     )

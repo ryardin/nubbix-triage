@@ -19,8 +19,15 @@ class GroqProvider(LLMProvider):
         temperature: float,
         max_tokens: int,
         timeout_s: float = 30.0,
+        max_retries: int = 3,
     ) -> None:
-        super().__init__(model=model, temperature=temperature, max_tokens=max_tokens, timeout_s=timeout_s)
+        super().__init__(
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            timeout_s=timeout_s,
+            max_retries=max_retries,
+        )
 
         # max_retries=0: el SDK de Groq reintenta 2 veces por defecto, en silencio.
         # Lo apagamos para que los reintentos los maneje (y los cuente) LLMProvider.
