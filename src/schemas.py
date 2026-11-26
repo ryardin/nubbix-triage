@@ -9,10 +9,21 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-# Categorías fijas por consigna, escritas en orden de prioridad (qué bloquea más al
-# cliente): account > technical > billing > other. El orden acá es solo visual: el
-# desempate de tickets mixtos lo hace el modelo, siguiendo la regla del prompt.
-Category = Literal["account", "technical", "billing", "other"]
+# Categorías fijas por consigna: ÚNICA fuente de verdad. De este diccionario salen:
+# - el tipo Category que valida Pydantic (abajo),
+# - la lista con descripciones que recibe el prompt (marcador {categories}),
+# - la regla de desempate (marcador {priority}): el ORDEN del diccionario es la prioridad
+#   para tickets mixtos, según qué bloquea más al cliente.
+CATEGORIES = {
+    "account": "acceso, contraseña, usuarios, permisos y datos de la cuenta.",
+    "technical": "errores, fallas, lentitud o algo de Nubbix que no funciona.",
+    "billing": "pagos, cobros, facturas de Nubbix, planes y reembolsos.",
+    "other": "el ticket no entra en ninguna de las categorías anteriores.",
+}
+
+# Literal.__getitem__(...) es lo mismo que escribir Literal["account", "technical", ...],
+# pero construido desde CATEGORIES: si se agrega una categoría, el contrato se actualiza solo.
+Category = Literal.__getitem__(tuple(CATEGORIES))
 
 # Lista cerrada de acciones sugeridas para el agente humano. Es flexible: un
 # ticket puede llevar acciones de otra categoría (por ejemplo, un ticket mixto).

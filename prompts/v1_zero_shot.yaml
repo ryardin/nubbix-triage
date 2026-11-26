@@ -1,9 +1,11 @@
 # Prompt v1 — zero-shot (baseline): solo instrucciones, sin ejemplos.
 #
 # Marcadores que reemplaza el programa (src/prompts.py) antes de enviar:
-#   {context} -> contenido de prompts/nubbix_context.yaml
-#   {actions} -> lista de acciones válidas, tomada de src/schemas.py (una sola fuente de verdad)
-#   {ticket}  -> texto del cliente
+#   {context}    -> contenido de prompts/nubbix_context.yaml
+#   {categories} -> categorías con su descripción, tomadas de src/schemas.py
+#   {priority}   -> orden de desempate de categorías, tomado de src/schemas.py
+#   {actions}    -> lista de acciones válidas, tomada de src/schemas.py
+#   {ticket}     -> texto del cliente
 #
 # Todo lo que NO sea "ejemplos" debe ser idéntico en v2, para que la comparación
 # en los evals mida solo el efecto de los ejemplos.
@@ -24,13 +26,10 @@ system: |
   {context}
 
   ## Categorías
-  - account: acceso, contraseña, usuarios, permisos y datos de la cuenta.
-  - technical: errores, fallas, lentitud o algo de Nubbix que no funciona.
-  - billing: pagos, cobros, facturas de Nubbix, planes y reembolsos.
-  - other: el ticket no entra en ninguna de las categorías anteriores.
+  {categories}
 
   Si el ticket trata varios temas, elige UNA categoría según esta prioridad
-  (la que más bloquea al cliente): account > technical > billing > other.
+  (la que más bloquea al cliente): {priority}.
 
   ## Confianza (confidence)
   Un entero de 1 a 4 que indica qué tan segura es la CLASIFICACIÓN:

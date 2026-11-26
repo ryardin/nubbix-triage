@@ -6,9 +6,13 @@ Uso:
     response = provider.generate(system, messages)
 
 Los YAML tienen marcadores que se reemplazan acá:
-    {context} -> contenido de prompts/nubbix_context.yaml
-    {actions} -> acciones válidas, tomadas de src/schemas.py (una sola fuente de verdad)
-    {ticket}  -> texto del cliente
+    {context}    -> contenido de prompts/nubbix_context.yaml
+    {categories} -> categorías con su descripción, tomadas de src/schemas.py
+    {priority}   -> orden de desempate ("account > technical > ..."), tomado de src/schemas.py
+    {actions}    -> acciones válidas, tomadas de src/schemas.py
+    {ticket}     -> texto del cliente
+
+Categorías, prioridad y acciones salen de schemas.py: una sola fuente de verdad.
 
 Se usa .replace() y no .format(): el prompt contiene llaves reales (el JSON de
 ejemplo del formato de salida) que .format() confundiría con marcadores.
@@ -19,7 +23,7 @@ from typing import get_args
 import yaml
 
 from src.config import PROJECT_ROOT, ConfigError
-from src.schemas import Action
+from src.schemas import CATEGORIES, Action
 
 PROMPTS_DIR = PROJECT_ROOT / "prompts"
 CONTEXT_FILE = PROMPTS_DIR / "nubbix_context.yaml"
@@ -46,10 +50,18 @@ def build_prompt(version: str, ticket: str) -> tuple[str, list[dict[str, str]]]:
     prompt = load_yaml(path)
     context = load_yaml(CONTEXT_FILE)["content"]
 
+    # Categorías con su descripción, una por línea: "- account: acceso, contraseña, ..."
+    categories = "\n".join(f"- {name}: {description}" for name, description in CATEGORIES.items())
+
+    # Prioridad de desempate: el orden del diccionario CATEGORIES.
+    priority = " > ".join(CATEGORIES)
+
     # Lista de acciones válidas, una por línea: "- escalate_to_human", ...
     actions = "\n".join(f"- {action}" for action in get_args(Action))
 
     system = prompt["system"].replace("{context}", context.strip())
+    system = system.replace("{categories}", categories)
+    system = system.replace("{priority}", priority)
     system = system.replace("{actions}", actions)
 
     messages = []
