@@ -25,30 +25,24 @@ CATEGORIES = {
 # pero construido desde CATEGORIES: si se agrega una categoría, el contrato se actualiza solo.
 Category = Literal.__getitem__(tuple(CATEGORIES))
 
-# Lista cerrada de acciones sugeridas para el agente humano. Es flexible: un
-# ticket puede llevar acciones de otra categoría (por ejemplo, un ticket mixto).
-Action = Literal[
-    # Comunes a todas las categorías
-    "escalate_to_human",
-    "request_more_info",
-    # billing
-    "review_payment_status",
-    "check_duplicate_charge",
-    "resend_invoice",
-    "update_billing_details",
-    # technical
-    "check_service_status",
-    "send_troubleshooting_guide",
-    "escalate_to_engineering",
-    # account
-    "send_password_reset",
-    "verify_identity",
-    "update_account_details",
-    "manage_user_permissions",
-    # other
-    "forward_to_sales",
-    "send_help_center_link",
-]
+# Lista cerrada de acciones sugeridas para el agente humano, agrupadas por categoría:
+# ÚNICA fuente de verdad. De este diccionario salen:
+# - el tipo Action que valida Pydantic (abajo),
+# - la lista agrupada que recibe el prompt (marcador {actions}).
+# La agrupación orienta al modelo, pero la validación es flexible: un ticket puede
+# llevar acciones de cualquier grupo (por ejemplo, un ticket mixto).
+ACTIONS = {
+    "common": ["escalate_to_human", "request_more_info"],
+    "billing": ["review_payment_status", "check_duplicate_charge", "resend_invoice", "update_billing_details"],
+    "technical": ["check_service_status", "send_troubleshooting_guide", "escalate_to_engineering"],
+    "account": ["send_password_reset", "verify_identity", "update_account_details", "manage_user_permissions"],
+    "other": ["forward_to_sales", "send_help_center_link"],
+}
+
+# Todas las acciones de todos los grupos, en una sola tupla, convertidas en Literal
+# (igual que Category): si se agrega una acción a ACTIONS, el contrato se actualiza solo.
+ALL_ACTIONS = tuple(action for group in ACTIONS.values() for action in group)
+Action = Literal.__getitem__(ALL_ACTIONS)
 
 
 class TriageResponse(BaseModel):

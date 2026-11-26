@@ -4,7 +4,7 @@
 #   {context}    -> contenido de prompts/nubbix_context.yaml
 #   {categories} -> categorías con su descripción, tomadas de src/schemas.py
 #   {priority}   -> orden de desempate de categorías, tomado de src/schemas.py
-#   {actions}    -> lista de acciones válidas, tomada de src/schemas.py
+#   {actions}    -> acciones válidas agrupadas por categoría, tomadas de src/schemas.py
 #   {ticket}     -> texto del cliente
 #
 # "system" y "user_template" son idénticos a v1: la ÚNICA diferencia es "examples",
