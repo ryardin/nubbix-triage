@@ -10,6 +10,7 @@ Los YAML tienen marcadores que se reemplazan acá:
     {categories} -> categorías con su descripción, tomadas de src/schemas.py
     {priority}   -> orden de desempate ("account > technical > ..."), tomado de src/schemas.py
     {actions}    -> acciones válidas agrupadas por categoría, tomadas de src/schemas.py
+    {examples}   -> ejemplos resueltos de la versión (solo few-shot), como texto
     {ticket}     -> texto del cliente
 
 Categorías, prioridad y acciones salen de schemas.py: una sola fuente de verdad.
@@ -36,9 +37,9 @@ def load_yaml(path) -> dict:
 def build_prompt(version: str, ticket: str) -> tuple[str, list[dict[str, str]]]:
     """Arma el system prompt y los mensajes para una versión de prompt y un ticket.
 
-    Devuelve (system, messages), listo para provider.generate(system, messages).
-    En las versiones few-shot, cada ejemplo se agrega como una conversación previa:
-    un mensaje del usuario (el ticket del ejemplo) y la respuesta del asistente (su JSON).
+    Devuelve (system, messages), listo para provider.generate(system, messages, tool).
+    En las versiones few-shot, los ejemplos van como texto dentro del system prompt
+    (marcador {examples}); messages lleva siempre un solo mensaje: el ticket real.
     """
     path = PROMPTS_DIR / f"{version}.yaml"
     if not path.exists():
@@ -63,14 +64,19 @@ def build_prompt(version: str, ticket: str) -> tuple[str, list[dict[str, str]]]:
     system = system.replace("{priority}", priority)
     system = system.replace("{actions}", actions)
 
-    messages = []
-    # Ejemplos (solo en few-shot; en zero-shot la clave "examples" no existe).
-    for example in prompt.get("examples", []):
-        messages.append({"role": "user", "content": _fill_ticket(prompt, example["ticket"])})
-        messages.append({"role": "assistant", "content": example["response"].strip()})
+    # Ejemplos (solo en few-shot; en zero-shot la clave "examples" no existe y el
+    # system no tiene el marcador). Cada uno queda así:
+    #   Ejemplo 1
+    #   Ticket: Olvidé mi contraseña...
+    #   Respuesta: {"answer": ..., "confidence": 4, ...}
+    examples = "\n\n".join(
+        f"Ejemplo {number}\nTicket: {example['ticket'].strip()}\nRespuesta: {example['response'].strip()}"
+        for number, example in enumerate(prompt.get("examples", []), start=1)
+    )
+    system = system.replace("{examples}", examples)
 
-    # El ticket real va siempre al final.
-    messages.append({"role": "user", "content": _fill_ticket(prompt, ticket)})
+    # Un solo mensaje: el ticket real del cliente, entre los delimitadores.
+    messages = [{"role": "user", "content": _fill_ticket(prompt, ticket)}]
 
     return system.strip(), messages
 

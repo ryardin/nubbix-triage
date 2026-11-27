@@ -5,14 +5,18 @@
 #   {categories} -> categorías con su descripción, tomadas de src/schemas.py
 #   {priority}   -> orden de desempate de categorías, tomado de src/schemas.py
 #   {actions}    -> acciones válidas agrupadas por categoría, tomadas de src/schemas.py
+#   {examples}   -> los ejemplos de la lista "examples" (más abajo), como texto
 #   {ticket}     -> texto del cliente
 #
-# "system" y "user_template" son idénticos a v1: la ÚNICA diferencia es "examples",
-# así la comparación en los evals mide solo el efecto de los ejemplos.
+# "system" es idéntico a v1 salvo la sección final "## Ejemplos", y "user_template"
+# es idéntico: la ÚNICA diferencia son los ejemplos, así la comparación en los evals
+# mide solo su efecto.
 #
-# Los ejemplos se envían como una conversación previa: por cada ejemplo, un mensaje
-# del usuario (el ticket, con user_template) y la respuesta del asistente (el JSON).
-# El modelo ve cómo "ya respondió" antes y tiende a imitar ese formato.
+# Los ejemplos van como TEXTO dentro del system prompt (no como conversación previa):
+# - con tool calling no hay que fabricar llamadas falsas a la tool en el formato de
+#   cada proveedor (ni la "firma de razonamiento" que exige Gemini);
+# - si en el futuro hay conversaciones de varios mensajes, los ejemplos no se mezclan
+#   con la historia real del cliente: el system es "el manual" y los mensajes, lo real.
 #
 # IMPORTANTE: ningún ticket de estos ejemplos puede estar en evals/dataset.jsonl
 # (si estuviera, el modelo "ya vio la respuesta" y el score quedaría inflado).
@@ -70,6 +74,12 @@ system: |
   Responde ÚNICAMENTE con un objeto JSON válido, sin texto antes ni después y sin
   bloques de código. Debe tener exactamente estos 4 campos:
   {"answer": "...", "confidence": 1-4, "category": "...", "actions": ["..."]}
+
+  ## Ejemplos
+  Estos tickets ya fueron resueltos correctamente. Úsalos como referencia de cómo
+  aplicar las reglas; no copies sus respuestas.
+
+  {examples}
 
 user_template: |
   <ticket>
