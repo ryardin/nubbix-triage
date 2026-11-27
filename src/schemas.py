@@ -1,5 +1,7 @@
 """Contrato de salida del servicio: {answer, confidence, category, actions}.
 
+El modelo devuelve la respuesta llamando a la tool TRIAGE_TOOL (definida al final),
+cuyo schema sale de TriageResponse.
 Toda respuesta del LLM se valida contra TriageResponse antes de devolverse.
 Si no cumple el contrato, Pydantic lanza ValidationError y el pipeline reintenta
 pasándole al modelo el error. Las decisiones de cada límite están en el README.
@@ -67,3 +69,13 @@ class TriageResponse(BaseModel):
 
     # Entre 1 y 3 acciones: una lista vacía no le sirve al agente; más de 3 es ruido.
     actions: list[Action] = Field(min_length=1, max_length=3)
+
+
+# Tool que el modelo está OBLIGADO a llamar (tool calling forzado). Sus parámetros
+# son el JSON Schema que Pydantic genera desde TriageResponse: el contrato se escribe
+# una sola vez, y si cambia (por ejemplo, una categoría nueva), la tool cambia sola.
+TRIAGE_TOOL = {
+    "name": "triage_ticket",
+    "description": "Registra el triage de un ticket de soporte de Nubbix.",
+    "schema": TriageResponse.model_json_schema(),
+}

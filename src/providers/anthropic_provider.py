@@ -7,9 +7,11 @@ Nota sobre temperature: los modelos actuales de Claude no aceptan este parámetr
 respetar la interfaz común, pero no lo envía a la API.
 """
 
+import json
+
 import anthropic
 
-from src.providers.base import LLMProvider, Message, PermanentLLMError, TransientLLMError
+from src.providers.base import LLMProvider, Message, PermanentLLMError, Tool, TransientLLMError
 
 
 class AnthropicProvider(LLMProvider):
@@ -36,12 +38,25 @@ class AnthropicProvider(LLMProvider):
         # Lo apagamos para que los reintentos los maneje (y los cuente) LLMProvider.
         self.client = anthropic.Anthropic(api_key=api_key, timeout=timeout_s, max_retries=0)
 
-    def _call(self, system: str, messages: list[Message]) -> tuple[str, int, int]:
+    def _call(self, system: str, messages: list[Message], tool: Tool | None) -> tuple[str, int, int]:
         # 1) Traducir los mensajes: Anthropic recibe el system prompt aparte (parámetro `system`)
         #    y usa los mismos roles "user" y "assistant" que nuestro formato.
         anthropic_messages = []
         for message in messages:
             anthropic_messages.append({"role": message["role"], "content": message["content"]})
+
+        tool_params = {}
+        if tool:
+            tool_params = {
+                # La tool en formato Anthropic: el schema va en "input_schema".
+                "tools": [{
+                    "name": tool["name"],
+                    "description": tool["description"],
+                    "input_schema": tool["schema"],
+                }],
+                # Obliga al modelo a llamar ESTA tool.
+                "tool_choice": {"type": "tool", "name": tool["name"]},
+            }
 
         # 2) Llamar a la API y traducir los errores del SDK a nuestros dos tipos.
         try:
@@ -50,6 +65,7 @@ class AnthropicProvider(LLMProvider):
                 system=system,
                 messages=anthropic_messages,
                 max_tokens=self.max_tokens,
+                **tool_params,
             )
         except anthropic.APIStatusError as error:
             # La API respondió con un código de error HTTP.
@@ -60,12 +76,15 @@ class AnthropicProvider(LLMProvider):
             # La API no llegó a responder (timeout o problema de red).
             raise TransientLLMError(f"Anthropic sin respuesta (timeout o red): {error}") from error
 
-        # 3) Extraer el texto y los tokens.
+        # 3) Extraer el texto (o los argumentos de la tool) y los tokens.
         #    La respuesta es una lista de "bloques"; puede haber bloques de razonamiento
-        #    ("thinking") además del texto. Nos quedamos solo con los bloques de texto.
+        #    ("thinking") además del texto o de la llamada a la tool.
         text = ""
         for block in response.content:
-            if block.type == "text":
+            if tool and block.type == "tool_use":
+                # Anthropic entrega los argumentos como dict: los pasamos a texto JSON.
+                text = json.dumps(block.input, ensure_ascii=False)
+            elif not tool and block.type == "text":
                 text += block.text
 
         #    output_tokens ya incluye los tokens de razonamiento, si los hubo.

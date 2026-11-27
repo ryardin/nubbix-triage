@@ -21,6 +21,12 @@ logger = logging.getLogger(__name__)
 # El system prompt NO va en esta lista: se pasa aparte porque cada SDK lo ubica distinto.
 Message = dict[str, str]
 
+# Una tool que el modelo está obligado a llamar (tool calling forzado):
+# {"name": "...", "description": "...", "schema": {...JSON Schema de los parámetros...}}.
+# Con tool, `text` de la respuesta son los argumentos de la llamada como texto JSON;
+# sin tool (None), es el texto libre que escribió el modelo.
+Tool = dict
+
 
 # --------------------------------------------------------------------------- #
 # Respuesta normalizada
@@ -97,8 +103,11 @@ class LLMProvider(ABC):
         self.max_retries = max_retries      # Reintentos además del primer intento
         self.base_delay_s = base_delay_s    # Espera inicial del backoff exponencial
 
-    def generate(self, system: str, messages: list[Message]) -> LLMResponse:
+    def generate(self, system: str, messages: list[Message], tool: Tool | None = None) -> LLMResponse:
         """Llama al modelo con reintentos ante errores transitorios.
+
+        Si se pasa `tool`, el modelo está obligado a llamarla y `text` trae sus
+        argumentos como texto JSON (listo para TriageResponse.model_validate_json).
 
         Política: hasta `max_retries` reintentos con backoff exponencial + jitter
         (1 s, 2 s, 4 s... más un azar de hasta 0,5 s). Los errores permanentes se
@@ -109,7 +118,7 @@ class LLMProvider(ABC):
 
         for attempt in range(1, total_attempts + 1):
             try:
-                text, prompt_tokens, completion_tokens = self._call(system, messages)
+                text, prompt_tokens, completion_tokens = self._call(system, messages, tool)
             except TransientLLMError as error:
                 if attempt == total_attempts:
                     raise TransientLLMError(
@@ -137,9 +146,14 @@ class LLMProvider(ABC):
         raise AssertionError("generate() terminó sin resultado")
 
     @abstractmethod
-    def _call(self, system: str, messages: list[Message]) -> tuple[str, int, int]:
+    def _call(self, system: str, messages: list[Message], tool: Tool | None) -> tuple[str, int, int]:
         """Hace UNA llamada a la API del proveedor.
 
         Debe devolver (texto, prompt_tokens, completion_tokens) y traducir las
         excepciones de su SDK a TransientLLMError o PermanentLLMError.
+
+        Con `tool`, debe forzar su llamada y devolver los argumentos como texto JSON,
+        aunque su SDK los entregue como dict: así el resto del sistema no ve la
+        diferencia entre proveedores. Si el modelo no llamó a la tool, devuelve ""
+        (la validación fallará y el pipeline reintentará).
         """
