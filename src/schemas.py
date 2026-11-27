@@ -56,7 +56,7 @@ class TriageResponse(BaseModel):
     # Los tipos son permisivos (por defecto): "3" o 3.0 se aceptan como 3.
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
-    # Respuesta propuesta al cliente. El prompt pide 2 a 3 oraciones; el máximo
+    # Respuesta propuesta al cliente. El prompt pide 1 a 3 oraciones; el máximo
     # de 500 caracteres es el límite duro por si el modelo no lo respeta.
     answer: str = Field(min_length=5, max_length=500)
 
@@ -71,11 +71,55 @@ class TriageResponse(BaseModel):
     actions: list[Action] = Field(min_length=1, max_length=3)
 
 
+class TriageWithReasoning(TriageResponse):
+    """TriageResponse + el razonamiento del modelo (solo para el prompt v3, chain-of-thought).
+
+    Es un formato INTERNO: el pipeline valida con esta clase, separa `reasoning`
+    (para métricas y evals) y devuelve un TriageResponse. El contrato público
+    sigue siendo de 4 campos.
+    """
+
+    # Razonamiento breve paso a paso. El máximo acota los tokens de salida
+    # (Groq tiene max_tokens=512 y los 4 campos del contrato también ocupan lugar).
+    reasoning: str = Field(min_length=10, max_length=600)
+
+
 # Tool que el modelo está OBLIGADO a llamar (tool calling forzado). Sus parámetros
 # son el JSON Schema que Pydantic genera desde TriageResponse: el contrato se escribe
 # una sola vez, y si cambia (por ejemplo, una categoría nueva), la tool cambia sola.
+# "model" no se envía al proveedor: es la clase con la que el pipeline valida la respuesta.
 TRIAGE_TOOL = {
     "name": "triage_ticket",
     "description": "Registra el triage de un ticket de soporte de Nubbix.",
     "schema": TriageResponse.model_json_schema(),
+    "model": TriageResponse,
+}
+
+
+def _reasoning_first(schema: dict) -> dict:
+    """Pone `reasoning` como PRIMER campo del schema.
+
+    El modelo genera los campos en orden: si el razonamiento va primero, razona
+    ANTES de decidir la categoría. Si fuera al final (como queda por herencia),
+    razonaría después de haber decidido, y no serviría.
+    """
+    properties = schema["properties"]
+    schema["properties"] = {"reasoning": properties.pop("reasoning"), **properties}
+    schema["required"] = ["reasoning"] + [name for name in schema["required"] if name != "reasoning"]
+    return schema
+
+
+# Tool del prompt v3 (chain-of-thought): mismos campos + "reasoning" primero.
+TRIAGE_WITH_REASONING_TOOL = {
+    "name": "triage_ticket",
+    "description": "Registra el triage de un ticket de soporte de Nubbix, con el razonamiento previo.",
+    "schema": _reasoning_first(TriageWithReasoning.model_json_schema()),
+    "model": TriageWithReasoning,
+}
+
+# Tools disponibles para los prompts: cada YAML elige una con la clave "tool"
+# (si no la tiene, usa "triage").
+TOOLS = {
+    "triage": TRIAGE_TOOL,
+    "triage_with_reasoning": TRIAGE_WITH_REASONING_TOOL,
 }

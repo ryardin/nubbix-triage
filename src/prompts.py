@@ -22,7 +22,7 @@ ejemplo del formato de salida) que .format() confundiría con marcadores.
 import yaml
 
 from src.config import PROJECT_ROOT, ConfigError
-from src.schemas import ACTIONS, CATEGORIES
+from src.schemas import ACTIONS, CATEGORIES, TOOLS
 
 PROMPTS_DIR = PROJECT_ROOT / "prompts"
 CONTEXT_FILE = PROMPTS_DIR / "nubbix_context.yaml"
@@ -34,19 +34,36 @@ def load_yaml(path) -> dict:
         return yaml.safe_load(file)
 
 
-def build_prompt(version: str, ticket: str) -> tuple[str, list[dict[str, str]]]:
-    """Arma el system prompt y los mensajes para una versión de prompt y un ticket.
-
-    Devuelve (system, messages), listo para provider.generate(system, messages, tool).
-    En las versiones few-shot, los ejemplos van como texto dentro del system prompt
-    (marcador {examples}); messages lleva siempre un solo mensaje: el ticket real.
-    """
+def load_version(version: str) -> dict:
+    """Lee el YAML de una versión de prompt, o avisa cuáles existen si no la encuentra."""
     path = PROMPTS_DIR / f"{version}.yaml"
     if not path.exists():
         available = ", ".join(sorted(p.stem for p in PROMPTS_DIR.glob("v*.yaml")))
         raise ConfigError(f"Versión de prompt desconocida: '{version}'. Opciones válidas: {available}.")
+    return load_yaml(path)
 
-    prompt = load_yaml(path)
+
+def get_tool(version: str) -> dict:
+    """Devuelve la tool que usa una versión de prompt (clave "tool" del YAML).
+
+    Si el YAML no tiene la clave, usa "triage" (la tool del contrato de 4 campos).
+    v3 (chain-of-thought) usa "triage_with_reasoning".
+    """
+    tool_name = load_version(version).get("tool", "triage")
+    if tool_name not in TOOLS:
+        raise ConfigError(f"Tool desconocida en '{version}': '{tool_name}'. Opciones válidas: {', '.join(TOOLS)}.")
+    return TOOLS[tool_name]
+
+
+def build_prompt(version: str, ticket: str) -> tuple[str, list[dict[str, str]]]:
+    """Arma el system prompt y los mensajes para una versión de prompt y un ticket.
+
+    Devuelve (system, messages), listo para provider.generate(system, messages, tool),
+    con tool = get_tool(version).
+    En las versiones few-shot, los ejemplos van como texto dentro del system prompt
+    (marcador {examples}); messages lleva siempre un solo mensaje: el ticket real.
+    """
+    prompt = load_version(version)
     context = load_yaml(CONTEXT_FILE)["content"]
 
     # Categorías con su descripción, una por línea: "- account: acceso, contraseña, ..."

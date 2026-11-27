@@ -7,8 +7,9 @@
 #   {actions}    -> acciones válidas agrupadas por categoría, tomadas de src/schemas.py
 #   {ticket}     -> texto del cliente
 #
-# Todo lo que NO sea "ejemplos" debe ser idéntico en v2, para que la comparación
-# en los evals mida solo el efecto de los ejemplos.
+# Es la base de las otras versiones, que cambian UNA sola cosa cada una:
+#   v2 = v1 + ejemplos (few-shot)        -> v2 contra v1 mide el efecto de los ejemplos.
+#   v3 = v1 + razonamiento (chain-of-thought) -> v3 contra v1 mide el efecto del razonamiento.
 
 version: "1.0"
 name: "v1_zero_shot"
